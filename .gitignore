@@ -2,7 +2,4 @@
 venv
 __pycache__
 mog/__pycache__
-cache
-docs/data/large/com-youtube.ungraph.json
 .idea
-docs/data
