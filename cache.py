@@ -8,7 +8,7 @@ import mog.graph_io as GraphIO
 
 
 def get_graph_path( params ):
-    return 'docs/data/' + params['dataset'] + '/' + params['datafile']
+    return 'docs/data/' + params['datafile'] + ".json"
 
 
 def save_graph_layout(params, data):
@@ -20,12 +20,13 @@ def save_graph_layout(params, data):
 
 def get_filter_function(params):
     rank_filter = False if 'rank_filter' not in params else params['rank_filter'].lower() == 'true'
-    filename = 'docs/data/' + params['dataset'] + "/" + os.path.splitext(params['datafile'])[0] + "/" + params['filter_func'] + ".json"
-    return GraphIO.read_filter_function(filename, rank_filter)
+    filename = os.path.splitext(params['datafile'])[0] + "/" + params['filter_func'] + ".json"
+    print(filename)
+    return GraphIO.read_filter_function('docs/data/' + filename, rank_filter)
 
 
-def get_mog_path(dataset, datafile, ff, params=None):
-    path = 'docs/data/' + dataset + '/' + os.path.splitext(datafile)[0] + '/' + ff
+def get_mog_path(datafile, ff, params=None):
+    path = 'docs/cache/' + os.path.splitext(datafile)[0] + '/' + ff
     if params is not None:
         keys = list(params.keys())
         keys.sort()
@@ -34,10 +35,10 @@ def get_mog_path(dataset, datafile, ff, params=None):
     return path + ".json"
 
 
-def generate_mog(dataset, datafile, filter_func, cover_elem_count, cover_overlap, comp_method, link_method, rank_filter):
+def generate_mog(datafile, filter_func, cover_elem_count, cover_overlap, comp_method, link_method, rank_filter):
     mog = mapper.MapperOnGraphs()
 
-    mog_cf = get_mog_path(dataset, datafile, filter_func, {
+    mog_cf = get_mog_path(datafile, filter_func, {
                                                         'coverN': cover_elem_count,
                                                         'coverOverlap': cover_overlap,
                                                         'component_method': comp_method,
@@ -55,11 +56,16 @@ def generate_mog(dataset, datafile, filter_func, cover_elem_count, cover_overlap
 
     print("  >> creating " + mog_cf)
 
+    create_dir = ""
+    for d in mog_cf.split('/')[:-1]:
+        create_dir += d + '/'
+        if not os.path.exists(create_dir): os.mkdir(create_dir)
+
     # Load the graph and filter function
     start_time = time.time()
-    graph_data, graph = GraphIO.read_json_graph('docs/data/' + dataset + "/" + datafile)
+    graph_data, graph = GraphIO.read_json_graph('docs/data/' + datafile + ".json")
 
-    values = get_filter_function({'dataset': dataset, 'datafile': datafile, 'filter_func': filter_func,
+    values = get_filter_function({'datafile': datafile, 'filter_func': filter_func,
                                   'rank_filter': rank_filter})
     end_time = time.time()
 
@@ -84,22 +90,8 @@ def generate_mog(dataset, datafile, filter_func, cover_elem_count, cover_overlap
     return mog, mog_cf
 
 
-# def get_graph_filename(params):
-#     filename = get_cache_fn("graph_layout", params['dataset'], params['datafile'])
-#     if os.path.exists(filename):
-#         print("  >> " + params['datafile'] + " found in graph layout cache")
-#     else:
-#         graph_data, graph = GraphIO.read_json_graph('docs/data/' + params['dataset'] + "/" + params['datafile'])
-#         layout.initialize_radial_layout(graph)
-#
-#         with open(filename, 'w') as outfile:
-#             json.dump(nx.node_link_data(graph), outfile)
-#     return filename
-
-
 def get_mog(params):
-    print("asdf")
-    mog, mog_cf = generate_mog(params['dataset'], params['datafile'],
+    mog, mog_cf = generate_mog(params['datafile'],
                                params['filter_func'],
                                params['coverN'], params['coverOverlap'],
                                params['component_method'],

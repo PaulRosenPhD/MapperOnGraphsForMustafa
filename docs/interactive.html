@@ -59,15 +59,6 @@
             <div class="container" style="padding: 0;">
                 <div class="row">
                     <div class="col-4" style="padding-right: 3px;">
-                        <label for="dataset" style="margin-top: 3px;">Data Set</label>
-                    </div>
-                    <div class="col-8" style="padding-right: 3px;">
-                        <select class="form-control form-control-sm" id="dataset" name="dataset"
-                                onchange="change_dataset();"></select>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-4" style="padding-right: 3px;">
                         <label for="datafile" style="margin-top: 3px;">Data File</label>
                     </div>
                     <div class="col-8" style="padding-right: 3px;">
@@ -211,7 +202,6 @@
         if( mog_vis ) mog_vis.remove()
 
         let options = {
-            'dataset': get_selected_dataset(),
             'datafile': get_selected_datafile(),
             'filter_func': get_selected_filter_func(),
             'coverN': coverN_slider.getValue(),

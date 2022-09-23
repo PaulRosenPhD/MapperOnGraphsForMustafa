@@ -3,7 +3,6 @@
 
 function get_default_mog_options(ds,df,ff,coverN=3,rank=false,component='modularity'){
     return {
-            'dataset': ds,
             'datafile': df,
             'filter_func': ff,
             'coverN': coverN,
@@ -29,16 +28,15 @@ let Load_MOG_Vis = function(svg_name, options, static_uri=true, end_cb = ()=>{} 
     svg.style("cursor", "progress" )
 
     if( static_uri ){
-        let ds = options.dataset
         let df = options.datafile
-        df = df.substring(0,df.length-5)
+        //df = df.substring(0,df.length-5)
         let covN = options.coverN
         let link_m = options.link_method
         let rank = ( options.rank_filter ) ? 'true' : 'false'
         let comp_m = options.component_method
         let overlap = options.coverOverlap
 
-        uri = 'data/' + ds + '/' + df + '/' + ff + '_' + comp_m
+        uri = 'cache/' + df + '/' + ff + '_' + comp_m
                 + '_' + covN + '_' + overlap + '_' + link_m + '_' + rank + '.json'
     }
 
@@ -81,7 +79,7 @@ let Load_MOG_Vis = function(svg_name, options, static_uri=true, end_cb = ()=>{} 
 let Load_Graph_Vis = function(svg_name, options, static_uri=true, cb = null, end_cb = ()=>{} ){
 
     let uri = 'graph?' + $.param(options)
-    if( static_uri ) uri = 'data/' + options.dataset + '/' + options.datafile
+    if( static_uri ) uri = 'data/' + options.datafile + '.json'
 
     let svg = d3.select(svg_name)
     svg.style("cursor", "progress" )
@@ -135,8 +133,9 @@ let Load_Filter_Function = function( options, cb, static_uri=true ){
     let uri = "filter_function?" + $.param(options)
 
     if (static_uri) {
-        let df = options.datafile.substring(0,options.datafile.length-5)
-        uri = 'data/' + options.dataset + '/' + df + '/' + options.filter_func + '.json'
+        let df = options.datafile //.substring(0,options.datafile.length-5)
+        uri = 'data/' + df + '/' + options.filter_func + '.json'
+        console.log(df)
     }
 
     d3.json(uri, function (error, _ff_data) {

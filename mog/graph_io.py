@@ -1,5 +1,6 @@
 import networkx as nx
 import json
+import numpy as np
 
 
 def read_json_graph(filename):
@@ -37,6 +38,47 @@ def read_tsv_graph_file(filename):
         else:
             graph.add_edge(x[0], x[1], value=float(x[2]))
     return [None, graph]
+
+
+def read_numpy_graph(filename):
+    data = np.load(filename, allow_pickle=True)
+    for key in data.keys():
+        print("   variable name:", key          , end="  ")
+        print("type: "+ str(data[key].dtype) , end="  ")
+        print("shape:"+ str(data[key].shape))    
+
+    return data, None
+    
+
+def read_obj_graph(filename):
+    vertices = []
+    faces = []
+    graph = nx.Graph()
+
+    with open(filename, 'r') as f:
+        for l in f.readlines():
+            if l[0] == '#': continue
+            elif len(l) == 1: continue
+            elif l[0] == 'v': 
+                vertices.append( l.split()[1:4] )
+                graph.add_node( '#' + str(len(vertices)))
+            elif l[0] == 'f': faces.append( l.split()[1:4] )
+            else: print( l )
+
+    edges = []
+    for f in faces:
+        fp = [ int(f[0]), int(f[1]), int(f[2]) ]
+        edges.append( [fp[0], fp[1]] if fp[0] < fp[1] else [fp[1], fp[0]] )
+        edges.append( [fp[1], fp[2]] if fp[1] < fp[2] else [fp[2], fp[1]]  )
+        edges.append( [fp[2], fp[0]] if fp[2] < fp[0] else [fp[0], fp[2]]  )
+    edges.sort()
+    edges_unique = [edges[0]]
+    for i in range(1, len(edges)):
+        if edges[i][0] != edges[i-1][0] or edges[i][1] != edges[i-1][1]:
+            edges_unique.append(edges[i])
+            graph.add_edge( '#' + str(edges[i][0]), '#' + str(edges[i][1]), value=1)
+
+    return [vertices,edges_unique,faces], graph
 
 
 def read_filter_function(filename, ranked=False):

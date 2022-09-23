@@ -10,6 +10,8 @@ def __map(val, in_min, in_max, out_min, out_max):
 
 
 def __abstract_layout(g: nx.graph.Graph, use_best_root=True):
+    if g.number_of_nodes() == 0: return {}, 0
+
     mst = graph_mst.get_mst(g)
 
     if not use_best_root:

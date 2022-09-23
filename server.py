@@ -11,18 +11,14 @@ from flask import send_from_directory
 app = Flask(__name__, static_url_path="/docs", static_folder='docs')
 
 
-def request_valid(dataset_req, datafile_req, filter_func_req):
-    ds0 = request.args.get('dataset')
+def request_valid(dataset_req, filter_func_req):
     ds1 = request.args.get('datafile')
     ff = request.args.get('filter_func')
 
-    if dataset_req and ds0 not in data_mod.data_sets:
+    if dataset_req and ds1 not in data_mod.data_sets:
         return False
 
-    if datafile_req and ds1 not in data_mod.data_sets[ds0]:
-        return False
-
-    if filter_func_req and ff not in data_mod.data_sets[ds0][ds1]:
+    if filter_func_req and ff not in data_mod.data_sets[ds1]:
         return False
 
     return True
@@ -63,7 +59,7 @@ def get_datasets():
 @app.route('/graph', methods=['GET', 'POST'])
 def get_graph():
     # Check that the request is valid
-    if not request_valid(True, True, False):
+    if not request_valid(True, False):
         return "{'result':'failed'}"
 
     return send_file(cache.get_graph_path(request.args.to_dict()))
@@ -72,7 +68,7 @@ def get_graph():
 @app.route('/update_graph', methods=['GET', 'POST'])
 def update_graph():
     # Check that the request is valid
-    if not request_valid(True, True, False):
+    if not request_valid(True, False):
         return "{'result':'failed'}"
 
     cache.save_graph_layout(request.args.to_dict(), request.json)
@@ -83,9 +79,8 @@ def update_graph():
 @app.route('/update_mog', methods=['GET', 'POST'])
 def update_mog():
     # Check that the request is valid
-    if request_valid(True, True, True):
-        filename = cache.get_mog_path(request.args.get('dataset'),
-                                      request.args.get('datafile'),
+    if request_valid(True, True):
+        filename = cache.get_mog_path(request.args.get('datafile'),
                                       request.args.get('filter_func'),
                                       {
                                           'component_method' : request.args.get('component_method'),
@@ -104,7 +99,7 @@ def update_mog():
 @app.route('/filter_function', methods=['GET', 'POST'])
 def get_filter_function():
     # Check that the request is valid
-    if not request_valid(True, True, True):
+    if not request_valid(True, True):
         return "{'result':'failed'}"
     else:
         return json.dumps(cache.get_filter_function(request.args.to_dict()))
@@ -113,7 +108,7 @@ def get_filter_function():
 @app.route('/mog', methods=['GET', 'POST'])
 def get_mog():
     # Check that the request is valid
-    if not request_valid(True, True, True):
+    if not request_valid(True, True):
         return "{'result':'failed'}"
     else:
         return cache.get_mog(request.args.to_dict())

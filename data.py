@@ -26,25 +26,23 @@ filter_function_names = {'agd': 'Average Geodesic Distance',
 def process_graph(in_filename):
     print("Found: " + in_filename)
     basename, ext = os.path.splitext(ntpath.basename(in_filename).lower())
+    out_filename = 'docs/' + os.path.splitext(in_filename.lower())[0] + '.json'
 
-    # Check if the graph already exists
-    # if os.path.exists('docs/data/very_small/' + basename + '.json'): return 'docs/data/very_small/' + basename + '.json'
-    if os.path.exists('docs/data/small/' + basename + '.json'): return 'docs/data/small/' + basename + '.json'
-    if os.path.exists('docs/data/medium/' + basename + '.json'): return 'docs/data/medium/' + basename + '.json'
-    if os.path.exists('docs/data/large/' + basename + '.json'): return 'docs/data/large/' + basename + '.json'
+    if os.path.exists(out_filename): return out_filename
 
-    # Load the graph, if possible
     if ext == ".json": data, graph = GraphIO.read_json_graph(in_filename)
     elif ext == ".graph": data, graph = GraphIO.read_graph_file(in_filename)
     elif ext == ".tsv": data, graph = GraphIO.read_tsv_graph_file(in_filename)
+    elif ext == ".npz": data, graph = GraphIO.read_numpy_graph(in_filename)
+    elif ext == '.obj': data, graph = GraphIO.read_obj_graph(in_filename)
     else: return None
 
-    # set outfile name
-    # if graph.number_of_nodes() < 100: out_filename = 'docs/data/very_small/' + basename + '.json'
-    if graph.number_of_nodes() < 100: return None
-    elif graph.number_of_nodes() < 1000: out_filename = 'docs/data/small/' + basename + '.json'
-    elif graph.number_of_nodes() < 5000: out_filename = 'docs/data/medium/' + basename + '.json'
-    else: out_filename = 'docs/data/large/' + basename + '.json'
+    if graph is None: return None
+
+    create_dir = ""
+    for d in out_filename.split('/')[:-1]:
+        create_dir += d + '/'
+        if not os.path.exists(create_dir): os.mkdir(create_dir)
 
     print("   >> Converting " + in_filename + " to " + out_filename)
 
@@ -56,7 +54,7 @@ def process_graph(in_filename):
     if graph.number_of_nodes() < 5000:
         layout.initialize_radial_layout(graph)
 
-    # Write the graph to file
+    # # Write the graph to file
     GraphIO.write_json_graph(out_filename, graph)
 
     return out_filename
@@ -101,26 +99,19 @@ def generate_den(out_path, graph, weight, eps):
 def process_filter_functions(in_filename, max_time_per_file=1, scalableOnly=False):
     print("Processing Graph: " + in_filename)
 
-    ff_file_list = ["/agd.json", "/ecc.json", "/pr_0_85.json", "/fv.json", "/fv_norm.json", "/den_0_5.json"]
+    out_dir = os.path.splitext(in_filename)[0]
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
 
     need_processing = False
-    for f in ff_file_list:
-        need_processing = need_processing or not os.path.exists(f)
+    for f in filter_function_names.keys():
+        need_processing = need_processing or not os.path.exists(out_dir + '/' + f + ".json")
 
     if not need_processing: return
 
     data, graph = GraphIO.read_json_graph(in_filename)
 
-    out_dir = os.path.splitext(in_filename)[0]
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-
-    if scalableOnly:
-        mprocs = [multiprocessing.Process(target=generate_pr, args=(out_dir + "/pr_0_85.json", graph, 'value', 0.85)),
-                 multiprocessing.Process(target=generate_fv, args=(out_dir + "/fv.json", graph, 'value', False)),
-                 multiprocessing.Process(target=generate_fv, args=(out_dir + "/fv_norm.json", graph, 'value', True))]
-    else:
-        mprocs = [multiprocessing.Process(target=generate_agd, args=(out_dir + "/agd.json", graph, 'value')),
+    mprocs = [multiprocessing.Process(target=generate_agd, args=(out_dir + "/agd.json", graph, 'value')),
                  multiprocessing.Process(target=generate_ecc, args=(out_dir + "/ecc.json", graph)),
                  multiprocessing.Process(target=generate_pr, args=(out_dir + "/pr_0_85.json", graph, 'value', 0.85)),
                  multiprocessing.Process(target=generate_fv, args=(out_dir + "/fv.json", graph, 'value', False)),
@@ -139,19 +130,12 @@ def process_filter_functions(in_filename, max_time_per_file=1, scalableOnly=Fals
 
 def generate_data(max_time_per_file=1):
 
-    # Find graphs and convert them into usable json format
     data_gen = []
-    for d0 in os.listdir("data"):
-        if os.path.isdir("data/" + d0):
-            for d1 in os.listdir("data/" + d0):
-                try:
-                    if fnmatch.fnmatch(d1.lower(), "*.json") \
-                            or fnmatch.fnmatch(d1.lower(), "*.graph") \
-                            or fnmatch.fnmatch(d1.lower(), "*.tsv"):
-                        data_gen.append(process_graph("data/" + d0 + "/" + d1))
-                except:
-                    print("data/" + d0 + "/" + d1 + " failed with " + str(sys.exc_info()[0]))
-
+    for root, dirs, files in os.walk('data'):
+        for file in files:
+            if file.endswith(".npz") or file.endswith(".obj"):
+                data_gen.append( process_graph(os.path.join(root, file) ) )
+    
     for file in data_gen:
         if file is None: continue
         try:
@@ -168,24 +152,18 @@ def generate_data(max_time_per_file=1):
 
 def scan_datasets():
     # for d0 in ['very_small', 'small', 'medium', 'large']:
-    for d0 in ['small', 'medium', 'large']:
-        if os.path.isdir("docs/data/" + d0):
-            data_sets[d0] = {}
-            for d1 in os.listdir("docs/data/" + d0):
-                if fnmatch.fnmatch(d1.lower(), "*.json"):
-                    ff_dir = os.path.splitext("docs/data/" + d0 + '/' + d1)[0]
-                    data_sets[d0][d1] = {}
-                    for ff in filter_function_names.keys():
-                        if os.path.exists(ff_dir + "/" + ff + ".json"):
-                            data_sets[d0][d1][ff] = filter_function_names[ff]
-                    if len(data_sets[d0][d1]) == 0:
-                        del data_sets[d0][d1]
+    for root, dirs, files in os.walk('docs/data'):
+        troot = root[9:]
+        for file in files:
+            if file[:-5] in filter_function_names.keys():
+                if troot not in data_sets: data_sets[troot] = {}
+                data_sets[troot][file[:-5]] = filter_function_names[file[:-5]]
     GraphIO.write_json_data('docs/data/datasets.json',data_sets)
 
 
 def __pre_generate_mog( params, opts, opts_keys ):
     if len(opts_keys) == 0:
-        cache.generate_mog(params['dataset'], params['datafile'],
+        cache.generate_mog(params['datafile'],
                            params['filter_func'],
                            params['coverN'], params['coverOverlap'],
                            params['component_method'],
@@ -197,9 +175,8 @@ def __pre_generate_mog( params, opts, opts_keys ):
             __pre_generate_mog(params, opts, opts_keys[1:])
 
 
-def pre_generate_mog(dataset,datafile,ff):
+def pre_generate_mog(datafile,ff):
     opts = {
-        'dataset': [dataset],
         'datafile': [datafile],
         'filter_func': ff,
         'coverN': [2,3,4,6,8,10,20],
@@ -213,29 +190,17 @@ def pre_generate_mog(dataset,datafile,ff):
     __pre_generate_mog( {}, opts, list(opts.keys()) )
 
 
-# if not os.path.exists("docs/data/very_small"): os.mkdir("docs/data/very_small")
-if not os.path.exists("docs/data/small"): os.mkdir("docs/data/small")
-if not os.path.exists("docs/data/medium"): os.mkdir("docs/data/medium")
-if not os.path.exists("docs/data/large"): os.mkdir("docs/data/large")
-
-
 if __name__ == '__main__':
 
     timeout = int(sys.argv[1]) if len(sys.argv) > 1 else 1
 
-    # if timeout > 0:
-    #     generate_data(timeout)
-
-    process_graph('data/snap/com-youtube.ungraph.graph')
-    process_filter_functions('docs/data/large/amazon0302.json', 18000, True)
-    process_filter_functions('docs/data/large/com-amazon.ungraph.json', 18000, True)
-    process_filter_functions('docs/data/large/com-youtube.ungraph.json', 18000, True)
-    #
-    # scan_datasets()
-    #
-    # with multiprocessing.Pool(processes=6) as pool:
-    #     procs = []
-    #     for d0 in data_sets:
-    #         for d1 in data_sets[d0]:
-    #             procs.append( pool.apply_async(pre_generate_mog, (d0,d1,data_sets[d0][d1]) ) )
-    #     print([res.get(timeout=900) for res in procs])
+    if timeout > 0:
+        generate_data(timeout)
+    
+    scan_datasets()
+    
+    with multiprocessing.Pool(processes=6) as pool:
+        procs = []
+        for d0 in data_sets:
+            procs.append( pool.apply_async(pre_generate_mog, (d0,data_sets[d0]) ) )
+        [res.get(timeout=900) for res in procs]
