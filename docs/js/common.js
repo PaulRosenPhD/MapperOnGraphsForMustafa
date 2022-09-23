@@ -28,7 +28,8 @@ function clear_chart( chart_name ){
 	$(chart_name).empty();
 }
 
-var pages = ["small_multiples.html","figures.html", "interactive.html", "user_study.html"];
+//var pages = ["small_multiples.html","figures.html", "interactive.html", "user_study.html"];
+var pages = [];
 var page_titles = {"small_multiples.html": "Small Multiple Parameter Explorer",
                     "figures.html": "Paper Figures",
                     "interactive.html": "Interactive",
