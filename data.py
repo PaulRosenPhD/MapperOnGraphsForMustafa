@@ -30,14 +30,16 @@ def process_graph(in_filename):
 
     if os.path.exists(out_filename): return out_filename
 
+    graph=None
+    graphs=None
     if ext == ".json": data, graph = GraphIO.read_json_graph(in_filename)
     elif ext == ".graph": data, graph = GraphIO.read_graph_file(in_filename)
     elif ext == ".tsv": data, graph = GraphIO.read_tsv_graph_file(in_filename)
-    elif ext == ".npz": data, graph = GraphIO.read_numpy_graph(in_filename)
+    elif ext == ".npz": data, graphs = GraphIO.read_numpy_graphs(in_filename)
     elif ext == '.obj': data, graph = GraphIO.read_obj_graph(in_filename)
     else: return None
 
-    if graph is None: return None
+    if graph is None and graphs is None: return None
 
     create_dir = ""
     for d in out_filename.split('/')[:-1]:
@@ -46,18 +48,28 @@ def process_graph(in_filename):
 
     print("   >> Converting " + in_filename + " to " + out_filename)
 
-    # Extract the largest connected component
-    gcc = max(nx.connected_components(graph), key=len)
-    graph = graph.subgraph(gcc)
+    if graph is not None:
+        # Extract the largest connected component
+        gcc = max(nx.connected_components(graph), key=len)
+        graph = graph.subgraph(gcc)
 
-    # Provide a good quality initial layout for small and medium sized graphs
-    if graph.number_of_nodes() < 5000:
-        layout.initialize_radial_layout(graph)
+        # Provide a good quality initial layout for small and medium sized graphs
+        if graph.number_of_nodes() < 5000:
+            layout.initialize_radial_layout(graph)
 
-    # # Write the graph to file
-    GraphIO.write_json_graph(out_filename, graph)
+        # # Write the graph to file
+        GraphIO.write_json_graph(out_filename, graph)
 
-    return out_filename
+        return [out_filename]
+    else:
+        ofs = []
+        for i,g in enumerate(graphs['train']):
+            # print(i,g)
+            fn = out_filename[:-5] + '_train_' + str(i) + '.json'
+            # print(fn)
+            ofs.append(fn)
+            GraphIO.write_json_graph( fn, g )
+        return ofs
 
 
 # Generate AGD
@@ -134,7 +146,7 @@ def generate_data(max_time_per_file=1):
     for root, dirs, files in os.walk('data'):
         for file in files:
             if file.endswith(".npz") or file.endswith(".obj"):
-                data_gen.append( process_graph(os.path.join(root, file) ) )
+                data_gen.extend( process_graph(os.path.join(root, file) ) )
     
     for file in data_gen:
         if file is None: continue

@@ -1,3 +1,4 @@
+from re import T
 import networkx as nx
 import json
 import numpy as np
@@ -40,14 +41,47 @@ def read_tsv_graph_file(filename):
     return [None, graph]
 
 
-def read_numpy_graph(filename):
+def read_numpy_graphs(filename):
     data = np.load(filename, allow_pickle=True)
-    for key in data.keys():
-        print("   variable name:", key          , end="  ")
-        print("type: "+ str(data[key].dtype) , end="  ")
-        print("shape:"+ str(data[key].shape))    
+    # for key in data.keys():
+    #     print("   variable name:", key          , end="  ")
+    #     print("type: "+ str(data[key].dtype) , end="  ")
+    #     print("shape:"+ str(data[key].shape))    
 
-    return data, None
+    X_train = data['tr_feat'] # node features
+    A_train = list(data['tr_adj']) # list of adjacency matrices
+    y_train = data['tr_class'] # class labels
+
+    X_val = data['val_feat'] # node features
+    A_val = list(data['val_adj']) # list of adjacency matrices
+    y_val = data['val_class'] # class labels
+
+    X_test = data['te_feat'] # node features
+    A_test = list(data['te_adj']) # list of adjacency matrices
+    y_test = data['te_class'] # class labels
+
+    G_train = []
+    for a, x in zip(A_train, X_train):
+        G = nx.from_scipy_sparse_matrix(a)
+        x_tuple = tuple(map(tuple, x))
+        nx.set_node_attributes(G, dict(enumerate(x_tuple)), 'features')
+        G_train.append(G)
+        
+    G_val = []
+    for a, x in zip(A_val, X_val):
+        G = nx.from_scipy_sparse_matrix(a)
+        x_tuple = tuple(map(tuple, x))
+        nx.set_node_attributes(G, dict(enumerate(x_tuple)), 'features')
+        G_val.append(G)
+        
+    G_test = []
+    for a, x in zip(A_test, X_test):
+        G = nx.from_scipy_sparse_matrix(a)
+        x_tuple = tuple(map(tuple, x))
+        nx.set_node_attributes(G, dict(enumerate(x_tuple)), 'features')
+        G_test.append(G)    
+
+    return None, {'train': G_train, 'val': G_val, 'test': G_test}
     
 
 def read_obj_graph(filename):
@@ -96,10 +130,26 @@ def round_floats(o):
     if isinstance(o, (list, tuple)): return [round_floats(x) for x in o]
     return o
 
+def _to_json(python_object) :
+    if isinstance(python_object, np.float32):
+        return float(python_object)
+    elif isinstance(python_object, np.float64):
+        return float(python_object)
+    elif isinstance(python_object, np.int32):
+        return int(python_object)
+    elif isinstance(python_object, tuple) :
+        python_object = {'__class__': 'tuple',
+                         '__value__': list(python_object)}
+    else :
+        raise TypeError(str(type(python_object)) + ' is not JSON serializable') 
+
+    return python_object
+
 
 def write_json_data(filename, data):
     with open(filename, 'w') as outfile:
-        json.dump(round_floats(data), outfile, separators=(',', ':'))
+        #json.dump(round_floats(data), outfile, separators=(',', ':'))
+        json.dump(data, outfile, separators=(',', ':'), default=_to_json)
 
 
 def write_json_graph(filename, graph):

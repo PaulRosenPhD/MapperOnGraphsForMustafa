@@ -37,9 +37,13 @@ class Cover:
 def _get_components(graph: nx.classes.graph.Graph, values, cover: Cover, component_method):
     ret = []
     for ce in cover.get_cover_elements():
-
-        filtered = list(filter(lambda v: ce['range'][0] <= values[v] <= ce['range'][1], values))
+        # print(values)
+        _filtered = filter(lambda v: ce['range'][0] <= values[v] <= ce['range'][1], values)
+        filtered = list(map(lambda v: int(v) if v.isnumeric() else v, _filtered))
         subg = graph.subgraph(filtered)
+
+        # print(filtered)
+        # print(subg.nodes)
 
         if subg.number_of_edges() == 0:
             components = nx.connected_components(subg)
@@ -63,7 +67,7 @@ def _get_components(graph: nx.classes.graph.Graph, values, cover: Cover, compone
 def _get_nodes(values, components):
     nodes = []
     for component in components:
-        comp_vals = list(map((lambda _l: values[_l]), component['components']))
+        comp_vals = list(map((lambda _l: values[str(_l)]), component['components']))
         nodes.append({'id': 'mn' + str(len(nodes)),
                       'cover': component['cover']['level'],
                       'min_v': min(comp_vals),
