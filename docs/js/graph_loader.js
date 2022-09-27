@@ -46,7 +46,7 @@ let Load_MOG_Vis = function(svg_name, options, static_uri=true, end_cb = ()=>{} 
         } else {
             mog_data = data
             mog_vis = GraphVisualization(svg_name, mog_data);
-            mog_vis.set_node_radius(d => Math.min( Math.sqrt(d.comp_len), 20));
+            mog_vis.set_node_radius(d => Math.min( Math.sqrt(d.comp_len)*2.5, 20));
             mog_vis.set_node_color(n=>colorSchemes[ff](n.avg_v));
             mog_vis.set_link_width(d => Math.min( Math.sqrt(d.value), 20)/2 );
             mog_vis.add_count_labels();

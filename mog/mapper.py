@@ -5,7 +5,8 @@ import networkx as nx
 import statistics as stats
 import mog.graph_io as GraphIO
 import layout.initial_layout as layout
-
+import numpy as np
+from scipy import sparse
 
 class Cover:
     def __init__(self, values, intervals, overlap):
@@ -140,6 +141,8 @@ class MapperOnGraphs:
             'cover': cover.get_cover_elements()
         }
 
+        self.input_graph = input_graph
+
         start_time = time.time()
 
         if verbose:
@@ -184,6 +187,24 @@ class MapperOnGraphs:
     def strip_components_from_nodes(self):
         for (n, data) in self.mapper_graph.nodes.items():
             del data['comp']
+
+    def to_relationship_matrix(self):
+        node_map = {}
+        for n in self.input_graph.nodes:
+            node_map[n] = len(node_map)
+        print(node_map)    
+        arr = None # np.array([])
+        for (n, data) in self.mapper_graph.nodes.items():        
+            tarr = [0] * len(node_map)
+            for i in data['comp']:
+                tarr[node_map[i]] = 1
+            row = np.array([tarr])
+            if arr is None:
+                arr = row
+            else:
+                arr = np.append(arr,row,axis=0)
+        return sparse.csr_matrix(arr)
+
 
     def filter_node_size(self, minimum_node_size):
         component_sizes = {}

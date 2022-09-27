@@ -6,6 +6,7 @@ import time
 import mog.mapper as mapper
 import mog.graph_io as GraphIO
 
+from scipy import sparse
 
 def get_graph_path( params ):
     return 'docs/data/' + params['datafile'] + ".json"
@@ -80,6 +81,8 @@ def generate_mog(datafile, filter_func, cover_elem_count, cover_overlap, comp_me
 
     # Construct & save MOG
     mog.build_mog(graph, values, cover, comp_method, link_method, verbose=graph.number_of_nodes() > 1000)
+    S = mog.to_relationship_matrix()
+    sparse.save_npz(mog_cf[:-4]+ "npz", S)
     mog.strip_components_from_nodes()
     mog.save_json(mog_cf)
 
